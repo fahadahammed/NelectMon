@@ -12,8 +12,6 @@ class RedisOps:
                                     db=int(self.rd))
         self.rc = redis.Redis(connection_pool=pool, decode_responses=True)
 
-import redis
-
 
 def insert_data(the_key, the_value):
     r = redis.Redis(host='localhost', port=6379, db=0)
@@ -21,6 +19,7 @@ def insert_data(the_key, the_value):
 
 
 pool = redis.ConnectionPool(host='localhost', port=6379, db=0)
+
 
 def insert_data(the_key, the_value):
     r = redis.Redis(connection_pool=pool, decode_responses=True)

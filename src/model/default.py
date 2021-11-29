@@ -1,48 +1,34 @@
 from src.library.redisops import RedisOps
 import datetime
 from src.library.fextras import byte_object_to_str, generate_id
-from src.model.user import User
+from src.library.mongoops import MongoOperations
 
 
 class DefaultModel:
     def __init__(self):
         self.rc = RedisOps().rc
-        self.dtnow = datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=6)))
+        self.dtnow = str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=6))))
+        self.collection_name = "beats"
 
-    def insert_note(self, note, email):
-        """
-        Insert a note into the database
-        :param note:
-        :return:
-        """
-        note_id = generate_id()
-        created_at = self.dtnow
-        updated_at = self.dtnow
-        note_object = {
-            'id': note_id,
-            'note': note,
-            'author': email,
-            'created_at': datetime.datetime.timestamp(created_at),
-            'updated_at': datetime.datetime.timestamp(updated_at)
-        }
+    @staticmethod
+    def prepare_data_sto_store(data_json):
+        new_data = data_json.copy()
+        new_data["created_at"] = str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=6))))
+        new_data["updated_at"] = str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=6))))
+        return new_data
 
+    def insert_beat(self, data):
+        to_return = True
         try:
-            self.rc.hset(name=f'note:{note_id}', mapping=note_object)
-            return {'status': 'success', 'message': 'Note inserted successfully'}
-        except Exception as ex:
-            return {'status': 'error', 'msg': str(ex)}
-
-    def get_keys(self, pattern):
-        return self.rc.keys(pattern=pattern)
-
-    def get_notes(self):
-        try:
-            keys = self.get_keys(pattern='note:*')
-            total = []
-            for key in keys:
-                note = self.rc.hgetall(name=key)
-                total.append(byte_object_to_str(note))
-            return total
+            MongoOperations(collection_name=self.collection_name).insert_data(data_json=DefaultModel().prepare_data_sto_store(data_json=data))
         except Exception as ex:
             print(ex)
-            return False
+            to_return = False
+        return to_return
+
+    def get_beats(self, data):
+        to_return = []
+        for _ in MongoOperations(collection_name=self.collection_name).get_data(data_json=data)[:100]:
+            del _["_id"]
+            to_return.append(_)
+        return to_return
